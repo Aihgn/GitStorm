@@ -1,0 +1,407 @@
+{
+  "name": "git-storm",
+  "displayName": "Git Storm",
+  "description": "PhpStorm-style Git for VS Code: commit graph, branch manager, stashes, inline blame, file history. Free.",
+  "version": "0.2.0",
+  "publisher": "Aihgn",
+  "license": "MIT",
+  "icon": "media/icon.png",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "SCM Providers"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "icons": {
+      "gitstorm-logo": {
+        "description": "GitStorm Logo",
+        "default": {
+          "fontPath": "media/gitstorm.woff",
+          "fontCharacter": "\\E001"
+        }
+      }
+    },
+    "viewsContainers": {
+      "panel": [
+        {
+          "id": "gitstormPanel",
+          "title": "GitStorm",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "gitstormPanel": [
+        {
+          "id": "gitstorm.repo",
+          "name": "Repository"
+        },
+        {
+          "id": "gitstorm.graphView",
+          "name": "Log",
+          "type": "webview"
+        },
+        {
+          "id": "gitstorm.history",
+          "name": "File History",
+          "visibility": "collapsed"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "gitstorm.repo",
+        "contents": "No Git repository found in this folder.\n[Open Folder](command:vscode.openFolder)"
+      }
+    ],
+    "commands": [
+      {
+        "command": "gitstorm.showGraph",
+        "title": "Show Commit Graph",
+        "category": "Git Storm",
+        "icon": "$(gitstorm-logo)"
+      },
+      {
+        "command": "gitstorm.openGraphInEditor",
+        "title": "Open Commit Graph in an Editor Tab",
+        "category": "Git Storm",
+        "icon": "$(link-external)"
+      },
+      {
+        "command": "gitstorm.togglePanel",
+        "title": "Toggle the Git Panel",
+        "category": "Git Storm",
+        "icon": "$(gitstorm-logo)"
+      },
+      {
+        "command": "gitstorm.fileHistory",
+        "title": "Show File History",
+        "category": "Git Storm",
+        "icon": "$(history)"
+      },
+      {
+        "command": "gitstorm.toggleBlame",
+        "title": "Toggle Inline Blame",
+        "category": "Git Storm",
+        "icon": "$(eye)"
+      },
+      {
+        "command": "gitstorm.toggleAnnotate",
+        "title": "Annotate with Git Blame",
+        "category": "Git Storm",
+        "icon": "$(git-commit)"
+      },
+      {
+        "command": "gitstorm.revealCommit",
+        "title": "Show Commit in Graph",
+        "category": "Git Storm"
+      },
+      {
+        "command": "gitstorm.refreshHistory",
+        "title": "Refresh",
+        "category": "Git Storm",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "gitstorm.refreshRepo",
+        "title": "Refresh",
+        "category": "Git Storm",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "gitstorm.checkout",
+        "title": "Checkout",
+        "category": "Git Storm",
+        "icon": "$(check)"
+      },
+      {
+        "command": "gitstorm.deleteRef",
+        "title": "Delete",
+        "category": "Git Storm",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "gitstorm.renameRef",
+        "title": "Rename",
+        "category": "Git Storm"
+      },
+      {
+        "command": "gitstorm.mergeRef",
+        "title": "Merge into Current Branch",
+        "category": "Git Storm"
+      },
+      {
+        "command": "gitstorm.rebaseOnto",
+        "title": "Rebase Current Branch onto",
+        "category": "Git Storm"
+      },
+      {
+        "command": "gitstorm.newBranch",
+        "title": "New Branch",
+        "category": "Git Storm",
+        "icon": "$(add)"
+      },
+      {
+        "command": "gitstorm.newTag",
+        "title": "New Tag",
+        "category": "Git Storm",
+        "icon": "$(add)"
+      },
+      {
+        "command": "gitstorm.stashPush",
+        "title": "Stash Changes",
+        "category": "Git Storm",
+        "icon": "$(add)"
+      },
+      {
+        "command": "gitstorm.stashApply",
+        "title": "Apply Stash",
+        "category": "Git Storm"
+      },
+      {
+        "command": "gitstorm.stashPop",
+        "title": "Pop Stash",
+        "category": "Git Storm",
+        "icon": "$(debug-step-out)"
+      },
+      {
+        "command": "gitstorm.stashDrop",
+        "title": "Drop Stash",
+        "category": "Git Storm",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "gitstorm.stashShow",
+        "title": "Show Stash",
+        "category": "Git Storm"
+      },
+      {
+        "command": "gitstorm.diffRevision",
+        "title": "Diff Revision",
+        "category": "Git Storm"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "gitstorm.checkout",
+          "when": "false"
+        },
+        {
+          "command": "gitstorm.deleteRef",
+          "when": "false"
+        },
+        {
+          "command": "gitstorm.renameRef",
+          "when": "false"
+        },
+        {
+          "command": "gitstorm.mergeRef",
+          "when": "false"
+        },
+        {
+          "command": "gitstorm.rebaseOnto",
+          "when": "false"
+        },
+        {
+          "command": "gitstorm.stashApply",
+          "when": "false"
+        },
+        {
+          "command": "gitstorm.stashPop",
+          "when": "false"
+        },
+        {
+          "command": "gitstorm.stashDrop",
+          "when": "false"
+        },
+        {
+          "command": "gitstorm.stashShow",
+          "when": "false"
+        },
+        {
+          "command": "gitstorm.diffRevision",
+          "when": "false"
+        },
+        {
+          "command": "gitstorm.revealCommit",
+          "when": "false"
+        },
+        {
+          "command": "gitstorm.refreshRepo",
+          "when": "false"
+        },
+        {
+          "command": "gitstorm.refreshHistory",
+          "when": "false"
+        }
+      ],
+      "editor/lineNumber/context": [
+        {
+          "command": "gitstorm.toggleAnnotate",
+          "group": "1_gitstorm@1"
+        }
+      ],
+      "editor/gutter/context": [
+        {
+          "command": "gitstorm.toggleAnnotate",
+          "group": "1_gitstorm@1"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "gitstorm.fileHistory",
+          "group": "gitstorm@1"
+        },
+        {
+          "command": "gitstorm.toggleAnnotate",
+          "group": "gitstorm@2"
+        }
+      ],
+      "editor/title/context": [
+        {
+          "command": "gitstorm.fileHistory",
+          "group": "gitstorm@1"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "gitstorm.toggleAnnotate",
+          "when": "resourceScheme == file",
+          "group": "navigation@9"
+        }
+      ],
+      "scm/title": [
+        {
+          "command": "gitstorm.showGraph",
+          "group": "navigation"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "gitstorm.newBranch",
+          "when": "view == gitstorm.repo",
+          "group": "navigation@1"
+        },
+        {
+          "command": "gitstorm.refreshRepo",
+          "when": "view == gitstorm.repo",
+          "group": "navigation@2"
+        },
+        {
+          "command": "gitstorm.openGraphInEditor",
+          "when": "view == gitstorm.graphView",
+          "group": "navigation"
+        },
+        {
+          "command": "gitstorm.refreshHistory",
+          "when": "view == gitstorm.history",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "gitstorm.newBranch",
+          "when": "view == gitstorm.repo && viewItem == group.branches",
+          "group": "inline"
+        },
+        {
+          "command": "gitstorm.stashPush",
+          "when": "view == gitstorm.repo && viewItem == group.stashes",
+          "group": "inline"
+        },
+        {
+          "command": "gitstorm.checkout",
+          "when": "view == gitstorm.repo && viewItem =~ /^ref\\.(head|remote)$/",
+          "group": "inline"
+        },
+        {
+          "command": "gitstorm.checkout",
+          "when": "view == gitstorm.repo && viewItem =~ /^ref\\.(head|remote|tag)$/",
+          "group": "1_checkout@1"
+        },
+        {
+          "command": "gitstorm.newBranch",
+          "when": "view == gitstorm.repo && viewItem =~ /^ref\\./",
+          "group": "1_checkout@2"
+        },
+        {
+          "command": "gitstorm.mergeRef",
+          "when": "view == gitstorm.repo && viewItem =~ /^ref\\.(head|remote|tag)$/",
+          "group": "2_integrate@1"
+        },
+        {
+          "command": "gitstorm.rebaseOnto",
+          "when": "view == gitstorm.repo && viewItem =~ /^ref\\.(head|remote)$/",
+          "group": "2_integrate@2"
+        },
+        {
+          "command": "gitstorm.renameRef",
+          "when": "view == gitstorm.repo && viewItem =~ /^ref\\.head/",
+          "group": "3_modify@1"
+        },
+        {
+          "command": "gitstorm.deleteRef",
+          "when": "view == gitstorm.repo && viewItem =~ /^ref\\.(head|tag)$/",
+          "group": "3_modify@2"
+        },
+        {
+          "command": "gitstorm.stashPop",
+          "when": "view == gitstorm.repo && viewItem == stash",
+          "group": "inline@1"
+        },
+        {
+          "command": "gitstorm.stashDrop",
+          "when": "view == gitstorm.repo && viewItem == stash",
+          "group": "inline@2"
+        },
+        {
+          "command": "gitstorm.stashApply",
+          "when": "view == gitstorm.repo && viewItem == stash",
+          "group": "1_stash@1"
+        },
+        {
+          "command": "gitstorm.stashPop",
+          "when": "view == gitstorm.repo && viewItem == stash",
+          "group": "1_stash@2"
+        },
+        {
+          "command": "gitstorm.stashDrop",
+          "when": "view == gitstorm.repo && viewItem == stash",
+          "group": "1_stash@3"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Git Storm",
+      "properties": {
+        "gitstorm.inlineBlame": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show inline blame annotation on the current line."
+        },
+        "gitstorm.graphMaxCommits": {
+          "type": "number",
+          "default": 1000,
+          "description": "Maximum commits loaded in the commit graph."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -w -p ./",
+    "test": "npm run compile && node test/selfcheck.js",
+    "package": "npx @vscode/vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.4.0"
+  }
+}

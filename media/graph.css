@@ -1,0 +1,399 @@
+html, body {
+    height: 100%;
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    margin: 0;
+    overflow: hidden;
+    font-family: var(--vscode-font-family);
+    font-size: 13px;
+    color: var(--vscode-foreground);
+    background: var(--vscode-editor-background);
+}
+
+/* ------------------------------------------------------------------ toolbar */
+
+#toolbar {
+    display: flex;
+    /* Wraps rather than clipping its buttons when the editor group is narrow. */
+    flex-wrap: wrap;
+    flex: none;
+    align-items: center;
+    gap: 6px 8px;
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+#toolbar button {
+    display: flex;
+    align-items: center;
+    padding: 3px 9px;
+    color: var(--vscode-button-secondaryForeground, var(--vscode-foreground));
+    background: var(--vscode-button-secondaryBackground, transparent);
+    border: 1px solid var(--vscode-panel-border);
+    border-radius: 3px;
+    font-family: inherit;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+#toolbar button:hover {
+    background: var(--vscode-toolbar-hoverBackground);
+}
+
+#filter {
+    flex: 1 1 160px;
+    min-width: 110px;
+    max-width: 280px;
+    padding: 3px 8px;
+    color: var(--vscode-input-foreground);
+    background: var(--vscode-input-background);
+    border: 1px solid var(--vscode-input-border, var(--vscode-panel-border));
+    border-radius: 3px;
+    outline: none;
+}
+
+#filter:focus {
+    border-color: var(--vscode-focusBorder);
+}
+
+#scope {
+    max-width: 200px;
+    padding: 3px 6px;
+    color: var(--vscode-dropdown-foreground);
+    background: var(--vscode-dropdown-background);
+    border: 1px solid var(--vscode-dropdown-border, var(--vscode-panel-border));
+    border-radius: 3px;
+    font-family: inherit;
+    font-size: 12px;
+}
+
+.spacer {
+    flex: 1;
+}
+
+#count, #branch {
+    color: var(--vscode-descriptionForeground);
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.sepbar {
+    width: 1px;
+    height: 18px;
+    background: var(--vscode-panel-border);
+}
+
+/* -------------------------------------------------------------------- graph */
+
+/*
+ * Wide and short is the normal shape here, since the graph lives in the bottom
+ * panel: the log takes the left, commit details the right. Narrow containers
+ * (a side-by-side editor group) stack them instead, see the media query below.
+ */
+#main {
+    display: flex;
+    flex: 1;
+    flex-direction: row;
+    min-height: 0;
+    min-width: 0;
+}
+
+#graph {
+    flex: 1;
+    overflow: auto;
+    min-width: 0;
+    min-height: 0;
+}
+
+.row {
+    display: flex;
+    align-items: center;
+    height: 26px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.row:hover {
+    background: var(--vscode-list-hoverBackground);
+}
+
+.row.selected {
+    background: var(--vscode-list-activeSelectionBackground);
+    color: var(--vscode-list-activeSelectionForeground);
+}
+
+.row.hidden {
+    display: none;
+}
+
+.lanes {
+    flex: none;
+    margin-right: 8px;
+}
+
+.subject {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.author {
+    flex: 0 0 140px;
+    padding: 0 8px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--vscode-descriptionForeground);
+}
+
+.ago {
+    flex: 0 0 110px;
+    color: var(--vscode-descriptionForeground);
+}
+
+.hash {
+    flex: 0 0 80px;
+    font-family: var(--vscode-editor-font-family);
+    color: var(--vscode-descriptionForeground);
+}
+
+.hash:hover {
+    text-decoration: underline;
+}
+
+.ref {
+    display: inline-block;
+    padding: 0 6px;
+    margin-right: 6px;
+    border-radius: 8px;
+    font-size: 11px;
+    line-height: 16px;
+}
+
+.ref.branch {
+    background: var(--vscode-gitDecoration-untrackedResourceForeground, #6cc24a);
+    color: var(--vscode-editor-background);
+}
+
+.ref.tag {
+    background: var(--vscode-gitDecoration-modifiedResourceForeground, #e0a852);
+    color: var(--vscode-editor-background);
+}
+
+.ref.head {
+    background: var(--vscode-focusBorder, #52a7e0);
+    color: var(--vscode-editor-background);
+}
+
+/* ----------------------------------------------------------------- splitter */
+
+#splitter {
+    flex: none;
+    width: 5px;
+    background: var(--vscode-panel-border);
+    cursor: col-resize;
+}
+
+#splitter:hover {
+    background: var(--vscode-focusBorder);
+}
+
+/* ------------------------------------------------------------------- detail */
+
+#detail {
+    display: flex;
+    flex: none;
+    flex-direction: column;
+    width: 380px;
+    min-width: 180px;
+    overflow: hidden;
+}
+
+.meta {
+    flex: 0 1 auto;
+    min-height: 56px;
+    padding: 10px 14px;
+    overflow: auto;
+}
+
+/* Divider between the commit message and the file list. */
+#dsplitter {
+    flex: none;
+    height: 5px;
+    background: var(--vscode-panel-border);
+    cursor: row-resize;
+}
+
+#dsplitter:hover {
+    background: var(--vscode-focusBorder);
+}
+
+.files {
+    flex: 1 1 auto;
+    min-height: 56px;
+    padding: 8px 0;
+    overflow: auto;
+}
+
+/* Stack the log above the details when the container is too narrow to split. */
+@media (max-width: 820px) {
+    #main {
+        flex-direction: column;
+    }
+
+    #splitter {
+        width: auto;
+        height: 5px;
+        cursor: row-resize;
+    }
+
+    #detail {
+        width: auto;
+        height: 200px;
+        min-height: 70px;
+    }
+}
+
+.dsubject {
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.dbody {
+    margin: 0 0 10px;
+    font-family: var(--vscode-editor-font-family);
+    font-size: 12px;
+    white-space: pre-wrap;
+    color: var(--vscode-descriptionForeground);
+}
+
+.meta dl {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 3px 12px;
+    margin: 0;
+    font-size: 12px;
+}
+
+.meta dt {
+    color: var(--vscode-descriptionForeground);
+}
+
+.meta dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+.link {
+    color: var(--vscode-textLink-foreground);
+    font-family: var(--vscode-editor-font-family);
+    cursor: pointer;
+}
+
+.link:hover {
+    text-decoration: underline;
+}
+
+.dim {
+    color: var(--vscode-descriptionForeground);
+}
+
+.fhead {
+    padding: 0 14px 6px;
+    color: var(--vscode-descriptionForeground);
+    font-size: 12px;
+}
+
+.file {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 2px 14px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.file:hover {
+    background: var(--vscode-list-hoverBackground);
+}
+
+.file.selected {
+    background: var(--vscode-list-activeSelectionBackground);
+    color: var(--vscode-list-activeSelectionForeground);
+}
+
+.fpath {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    /* Truncate paths at the front, where the uninteresting directories are. */
+    direction: rtl;
+    text-align: left;
+}
+
+/* Commit subjects in the multi-selection list are not paths; truncate at the end. */
+.fpath.ltr {
+    direction: ltr;
+}
+
+.meta p {
+    margin: 6px 0 0;
+    font-size: 12px;
+}
+
+.st {
+    flex: none;
+    width: 14px;
+    text-align: center;
+    font-family: var(--vscode-editor-font-family);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.st-A { color: var(--vscode-gitDecoration-addedResourceForeground, #6cc24a); }
+.st-M { color: var(--vscode-gitDecoration-modifiedResourceForeground, #e0a852); }
+.st-D { color: var(--vscode-gitDecoration-deletedResourceForeground, #e05252); }
+.st-R { color: var(--vscode-gitDecoration-renamedResourceForeground, #52a7e0); }
+
+.placeholder {
+    padding: 4px 14px;
+    color: var(--vscode-descriptionForeground);
+}
+
+/* ------------------------------------------------------------- context menu */
+
+#ctxmenu {
+    position: fixed;
+    display: none;
+    min-width: 230px;
+    padding: 4px 0;
+    background: var(--vscode-menu-background, var(--vscode-editorWidget-background));
+    color: var(--vscode-menu-foreground, var(--vscode-foreground));
+    border: 1px solid var(--vscode-menu-border, var(--vscode-panel-border));
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+    z-index: 10;
+}
+
+.mi {
+    padding: 4px 22px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.mi:hover {
+    background: var(--vscode-menu-selectionBackground);
+    color: var(--vscode-menu-selectionForeground);
+}
+
+.mi.sep {
+    margin-top: 4px;
+    border-top: 1px solid var(--vscode-menu-separatorBackground, var(--vscode-panel-border));
+    padding-top: 8px;
+}
+
+.mi.danger {
+    color: var(--vscode-errorForeground, #e05252);
+}
