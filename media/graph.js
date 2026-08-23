@@ -9,10 +9,12 @@ const COLORS = ['#e05252', '#52a7e0', '#6cc24a', '#e0a852', '#a06ce0', '#52e0c4'
 /**
  * Assign each commit a lane and work out which lines to draw through its row.
  * `lanes[i]` holds the hash that lane i is currently waiting to draw.
+ *
+ * `lanes` is carried in and mutated so a later page of commits continues the
+ * lanes the previous page left open: laying out a page at a time then gives the
+ * same rows as laying out the whole history at once.
  */
-function layout(commits) {
-    /** @type {(string|null)[]} */
-    const lanes = [];
+function layout(commits, lanes = []) {
     const rows = [];
     for (const c of commits) {
         const matches = [];
@@ -117,6 +119,7 @@ function commitMenu(commit) {
         { action: 'reword', label: 'Edit Commit Message…', sep: true },
         { action: 'cherryPick', label: 'Cherry-Pick' },
         { action: 'revert', label: isMerge ? 'Revert Merge (keep first parent)' : 'Revert' },
+        { action: 'drop', label: 'Drop Commit…', danger: true },
         { action: 'resetSoft', label: 'Reset Branch Here — Soft', sep: true },
         { action: 'resetMixed', label: 'Reset Branch Here — Mixed' },
         { action: 'resetHard', label: 'Reset Branch Here — Hard', danger: true },
@@ -129,6 +132,7 @@ function commitMenu(commit) {
 function multiMenu(count) {
     return [
         { action: 'squash', label: `Squash ${count} Commits into One…` },
+        { action: 'drop', label: `Drop ${count} Commits…`, danger: true },
         { action: 'copyHashes', label: 'Copy Hashes', sep: true }
     ];
 }
@@ -215,25 +219,59 @@ if (typeof acquireVsCodeApi !== 'undefined') {
     const metaEl = $('dmeta');
     const filesEl = $('dfiles');
     const menuEl = $('ctxmenu');
+    const moreEl = $('more');
     const splitterEl = $('splitter');
     const dSplitterEl = $('dsplitter');
 
     let commits = [];
+    /** Lane state carried between pages so appended rows line up. */
+    let laneState = [];
+    let maxLanes = 1;
+    let visibleCount = 0;
+    let hasMore = false;
+    let loading = false;
     /** Indices into `commits`, in row order. */
     let selection = [];
     let anchor = null;
     let detail = null;
+    /** Hash the extension asked us to select, still waiting on its page. */
+    let pendingReveal = null;
 
     const post = (type, payload) => vscode.postMessage({ type, ...payload });
     const selectedHashes = () => selection.map(i => commits[i].hash);
 
     // ------------------------------------------------------------- graph rows
 
-    function render() {
-        const rows = layout(commits);
-        const maxLanes = Math.min(Math.max(...rows.map(r => r.width), 1), 20);
+    function resetGraph() {
+        commits = [];
+        laneState = [];
+        maxLanes = 1;
+        visibleCount = 0;
+        hasMore = false;
+        loading = false;
+        graphEl.replaceChildren(moreEl);
+        graphEl.scrollTop = 0;
+    }
+
+    /**
+     * Build and insert rows for one page. Only the new rows touch the DOM —
+     * rendering the whole history at once is what makes a big repo crawl.
+     */
+    function appendCommits(page) {
+        const start = commits.length;
+        const rows = layout(page, laneState);
+        commits = commits.concat(page);
+
+        // Spreading a whole page into Math.max risks the argument limit.
+        for (const row of rows) {
+            if (row.width > maxLanes) { maxLanes = Math.min(row.width, 20); }
+        }
+        graphEl.style.setProperty('--lane-width', `${maxLanes * LANE_W}px`);
+
         const frag = document.createDocumentFragment();
-        rows.forEach((row, index) => {
+        const created = [];
+        rows.forEach((row, i) => {
+            const index = start + i;
             const c = row.commit;
             const el = document.createElement('div');
             el.className = 'row';
@@ -260,12 +298,67 @@ if (typeof acquireVsCodeApi !== 'undefined') {
                 if (!selection.includes(index)) { selectAt(index, {}); }
                 openMenu(e.clientX, e.clientY);
             });
+            created.push(el);
             frag.appendChild(el);
         });
-        graphEl.replaceChildren(frag);
-        applyFilter();
-        markSelected();
+        graphEl.insertBefore(frag, moreEl);
+        // The selection cannot have changed by appending, so no markSelected here.
+        filterNewRows(created);
     }
+
+    // ---------------------------------------------------------------- paging
+
+    function requestMore() {
+        if (loading || !hasMore) { return; }
+        loading = true;
+        updateFooter();
+        post('loadMore', {});
+    }
+
+    function updateFooter() {
+        moreEl.classList.toggle('clickable', hasMore && !loading);
+        moreEl.textContent = loading
+            ? 'Loading more commits…'
+            : hasMore
+                ? `${commits.length} commits loaded — scroll or click to load more`
+                : commits.length
+                    ? `end of history — ${commits.length} commits`
+                    : '';
+    }
+
+    /**
+     * Select a commit asked for from outside (a blame annotation). It may sit
+     * past the loaded pages, so keep paging towards it until it turns up or the
+     * history runs out.
+     */
+    function tryReveal() {
+        if (pendingReveal === null) { return; }
+        const i = commits.findIndex(c => c.hash === pendingReveal);
+        if (i < 0) {
+            if (hasMore) {
+                countEl.textContent = `looking for ${pendingReveal.substring(0, 8)}…`;
+                requestMore();
+            } else {
+                countEl.textContent = `${pendingReveal.substring(0, 8)} is not in this branch's history`;
+                pendingReveal = null;
+            }
+            return;
+        }
+        pendingReveal = null;
+        filterEl.value = '';   // a filter could be hiding the row
+        applyFilter();
+        selectAt(i, {});
+        const el = graphEl.querySelector(`.row[data-index="${i}"]`);
+        if (el) { el.scrollIntoView({ block: 'center' }); }
+    }
+
+    moreEl.addEventListener('click', requestMore);
+    graphEl.addEventListener('scroll', () => {
+        // Start the next page before the user reaches the bottom.
+        if (graphEl.scrollTop + graphEl.clientHeight >= graphEl.scrollHeight - 400) {
+            requestMore();
+        }
+    });
 
     function markSelected() {
         graphEl.querySelectorAll('.row.selected').forEach(r => r.classList.remove('selected'));
@@ -379,7 +472,7 @@ if (typeof acquireVsCodeApi !== 'undefined') {
             '<div class="fhead">newest first</div>' +
             picked.map(c => `
                 <div class="file">
-                    <span class="st">${c.hash.substring(0, 7)}</span>
+                    <span class="st shash">${c.hash.substring(0, 7)}</span>
                     <span class="fpath ltr">${esc(c.subject)}</span>
                 </div>`).join('');
     }
@@ -421,16 +514,42 @@ if (typeof acquireVsCodeApi !== 'undefined') {
 
     // ----------------------------------------------------------------- filter
 
-    function applyFilter() {
-        const q = filterEl.value.toLowerCase().trim();
-        let visible = 0;
-        graphEl.querySelectorAll('.row').forEach(el => {
-            const show = !q || el.dataset.search.includes(q);
-            el.classList.toggle('hidden', !show);
-            if (show) { visible++; }
-        });
-        countEl.textContent = q ? `${visible} / ${commits.length}` : `${commits.length} commits`;
+    const query = () => filterEl.value.toLowerCase().trim();
+
+    function filterRow(el, q) {
+        const show = !q || el.dataset.search.includes(q);
+        el.classList.toggle('hidden', !show);
+        return show;
     }
+
+    function updateCount() {
+        // Filtering only searches what has been loaded, so say so while paging.
+        const scope = hasMore ? ' loaded' : '';
+        countEl.textContent = query()
+            ? `${visibleCount} / ${commits.length}${scope}`
+            : `${commits.length}${scope} commits`;
+        updateFooter();
+    }
+
+    /** Full pass. Only for a changed query — appending must not re-scan the lot. */
+    function applyFilter() {
+        const q = query();
+        visibleCount = 0;
+        graphEl.querySelectorAll('.row').forEach(el => {
+            if (filterRow(el, q)) { visibleCount++; }
+        });
+        updateCount();
+    }
+
+    /** Incremental pass over one page, so appending stays O(page), not O(all). */
+    function filterNewRows(rowEls) {
+        const q = query();
+        for (const el of rowEls) {
+            if (filterRow(el, q)) { visibleCount++; }
+        }
+        updateCount();
+    }
+
     filterEl.addEventListener('input', applyFilter);
     scopeEl.addEventListener('change', () => post('scope', { scope: scopeEl.value }));
 
@@ -471,28 +590,26 @@ if (typeof acquireVsCodeApi !== 'undefined') {
         const msg = e.data;
         if (msg.type === 'commits') {
             const previous = selectedHashes();
-            commits = msg.commits;
-            render();
+            resetGraph();
+            hasMore = !!msg.hasMore;
+            appendCommits(msg.commits);
             // A rewrite (squash, reword, rebase) replaces hashes, so the previous
             // selection may no longer exist.
             reconcileSelection(previous);
             markSelected();
+        } else if (msg.type === 'commitsAppend') {
+            loading = false;
+            hasMore = !!msg.hasMore;
+            appendCommits(msg.commits);
+            tryReveal();
         } else if (msg.type === 'detail') {
             if (selection.length === 1 && msg.detail.hash === commits[selection[0]].hash) {
                 detail = msg.detail;
                 renderDetail();
             }
         } else if (msg.type === 'reveal') {
-            const i = commits.findIndex(c => c.hash === msg.hash);
-            if (i < 0) {
-                countEl.textContent = `${msg.hash.substring(0, 8)} is outside the loaded range`;
-                return;
-            }
-            filterEl.value = '';   // a filter could be hiding the row
-            applyFilter();
-            selectAt(i, {});
-            const el = graphEl.querySelector(`.row[data-index="${i}"]`);
-            if (el) { el.scrollIntoView({ block: 'center' }); }
+            pendingReveal = msg.hash;
+            tryReveal();
         } else if (msg.type === 'refs') {
             const current = scopeEl.value;
             scopeEl.innerHTML =

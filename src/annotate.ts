@@ -19,6 +19,14 @@ export class BlameAnnotations implements vscode.Disposable {
     private on = new Set<string>();
     private disposables: vscode.Disposable[] = [];
 
+    private _onDidToggle = new vscode.EventEmitter<vscode.TextDocument>();
+    /** Fires for a document whenever its annotations go on or off. */
+    readonly onDidToggle = this._onDidToggle.event;
+
+    isAnnotated(document: vscode.TextDocument): boolean {
+        return this.on.has(document.uri.toString());
+    }
+
     constructor() {
         this.disposables.push(
             // Re-blame after a save; between saves VS Code shifts the existing
@@ -45,17 +53,27 @@ export class BlameAnnotations implements vscode.Disposable {
         if (this.on.has(key)) {
             this.on.delete(key);
             editor.setDecorations(this.decoration, []);
+            this._onDidToggle.fire(editor.document);
             return;
         }
         this.on.add(key);
+        this._onDidToggle.fire(editor.document);
         await this.apply(editor);
     }
 
     private async apply(editor: vscode.TextEditor): Promise<void> {
+        // Giving up has to be announced too, or inline blame stays suppressed
+        // for a file that ended up with no annotations.
+        const giveUp = (message: string) => {
+            this.on.delete(editor.document.uri.toString());
+            editor.setDecorations(this.decoration, []);
+            this._onDidToggle.fire(editor.document);
+            vscode.window.showWarningMessage(message);
+        };
+
         const root = await Git.repoRootFor(editor.document.uri.fsPath);
         if (!root) {
-            this.on.delete(editor.document.uri.toString());
-            vscode.window.showWarningMessage('Git Storm: this file is not in a git repository.');
+            giveUp('Git Storm: this file is not in a git repository.');
             return;
         }
         let blame: BlameInfo[];
@@ -66,11 +84,7 @@ export class BlameAnnotations implements vscode.Disposable {
                 editor.document.isDirty ? editor.document.getText() : undefined
             );
         } catch (e) {
-            this.on.delete(editor.document.uri.toString());
-            editor.setDecorations(this.decoration, []);
-            vscode.window.showWarningMessage(
-                `Git Storm: cannot annotate this file — ${(e as Error).message.split('\n')[0]}`
-            );
+            giveUp(`Git Storm: cannot annotate this file — ${(e as Error).message.split('\n')[0]}`);
             return;
         }
 
@@ -89,13 +103,15 @@ export class BlameAnnotations implements vscode.Disposable {
 
     dispose(): void {
         this.decoration.dispose();
+        this._onDidToggle.dispose();
         this.disposables.forEach(d => d.dispose());
     }
 }
 
 function hover(info: BlameInfo): vscode.MarkdownString {
     const md = new vscode.MarkdownString();
-    md.isTrusted = true; // needed for the command link below
+    md.isTrusted = true;          // needed for the command link below
+    md.supportThemeIcons = true;  // without this "$(git-commit)" prints literally
     if (info.isUncommitted) {
         md.appendMarkdown('**Uncommitted changes**\n\nThis line has not been committed yet.');
         return md;

@@ -2,6 +2,12 @@
 import { Git } from './git';
 import { timeAgo } from './format';
 
+/** The part of BlameAnnotations this needs, kept narrow to avoid a cycle. */
+export interface AnnotationState {
+    isAnnotated(document: vscode.TextDocument): boolean;
+    onDidToggle: vscode.Event<vscode.TextDocument>;
+}
+
 export class InlineBlame implements vscode.Disposable {
     private decoration = vscode.window.createTextEditorDecorationType({
         after: {
@@ -14,7 +20,7 @@ export class InlineBlame implements vscode.Disposable {
     private timer: NodeJS.Timeout | undefined;
     private enabled: boolean;
 
-    constructor() {
+    constructor(private readonly annotations: AnnotationState) {
         this.enabled = vscode.workspace.getConfiguration('gitstorm').get('inlineBlame', true);
         this.disposables.push(
             vscode.window.onDidChangeTextEditorSelection(e => this.schedule(e.textEditor)),
@@ -22,6 +28,17 @@ export class InlineBlame implements vscode.Disposable {
             vscode.workspace.onDidChangeTextDocument(e => {
                 const ed = vscode.window.activeTextEditor;
                 if (ed && e.document === ed.document) { this.schedule(ed); }
+            }),
+            // Annotating a file already puts this line's commit on screen, so
+            // clear the end-of-line copy rather than saying it twice — and stack
+            // two hover cards on the same line.
+            annotations.onDidToggle(doc => {
+                for (const editor of vscode.window.visibleTextEditors) {
+                    if (editor.document === doc) {
+                        editor.setDecorations(this.decoration, []);
+                        this.schedule(editor);
+                    }
+                }
             })
         );
         if (vscode.window.activeTextEditor) {
@@ -47,6 +64,7 @@ export class InlineBlame implements vscode.Disposable {
 
     private async update(editor: vscode.TextEditor): Promise<void> {
         if (!this.enabled || editor.document.uri.scheme !== 'file') { return; }
+        if (this.annotations.isAnnotated(editor.document)) { return; }
         const line = editor.selection.active.line;
         const root = await Git.repoRootFor(editor.document.uri.fsPath);
         if (!root) { return; }

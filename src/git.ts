@@ -110,12 +110,24 @@ export class Git {
 
     private static LOG_FORMAT = `%H${FIELD}%P${FIELD}%an${FIELD}%ae${FIELD}%at${FIELD}%D${FIELD}%s${RECORD}`;
 
-    /** `scope` is a ref name to limit the graph to; omit for every branch. */
-    log(maxCount: number, scope?: string): Promise<Commit[]> {
-        return this.exec([
-            'log', scope || '--all', '--topo-order',
-            `--max-count=${maxCount}`, `--format=${Git.LOG_FORMAT}`
-        ]).then(out => this.parseLog(out));
+    /**
+     * One page of the graph. `scope` is a ref name to limit it to; omit for
+     * every branch. `skip` walks past commits already loaded — the topological
+     * order is deterministic, so paging this way cannot repeat or drop a commit.
+     */
+    log(maxCount: number, scope?: string, skip = 0): Promise<Commit[]> {
+        const args = ['log'];
+        if (scope) {
+            args.push(scope);
+        } else {
+            // refs/stash lives under refs/, so a bare --all drags every stash
+            // and its index/untracked parents into the graph as ordinary rows.
+            // --exclude only applies to the --all that follows it.
+            args.push('--exclude=refs/stash', '--all');
+        }
+        args.push('--topo-order', `--max-count=${maxCount}`, `--format=${Git.LOG_FORMAT}`);
+        if (skip > 0) { args.push(`--skip=${skip}`); }
+        return this.exec(args).then(out => this.parseLog(out));
     }
 
     fileLog(fsPath: string, maxCount = 500): Promise<Commit[]> {
@@ -504,6 +516,53 @@ export class Git {
         }
         const rewritten = (await this.exec(['rev-parse', 'HEAD'])).trim();
         await this.replayOnto(rewritten, hash, branch);
+    }
+
+    /** Why `hashes` cannot be dropped, or undefined when they can. */
+    async dropProblem(hashes: string[]): Promise<string | undefined> {
+        if (hashes.length === 0) {
+            return 'Select at least one commit to drop.';
+        }
+        const parents = await Promise.all(hashes.map(h => this.parentsOf(h)));
+        for (let i = 0; i < hashes.length; i++) {
+            const short = hashes[i].substring(0, 8);
+            if (parents[i].length > 1) {
+                return `${short} is a merge commit. Dropping it would flatten the branch it merged in; revert it instead.`;
+            }
+            if (parents[i].length === 0) {
+                return `${short} is the first commit of the repository, which cannot be dropped.`;
+            }
+        }
+        return undefined;
+    }
+
+    /**
+     * Remove commits from the branch entirely. Newest first, so every hash still
+     * waiting to be dropped keeps its identity while the commits after it are
+     * replayed — which is also why the selection need not be consecutive.
+     *
+     * Unlike a reword or squash this replays commits onto a *different* tree, so
+     * it genuinely can conflict. `replayOnto` aborts on failure; the error then
+     * says how far the run got rather than leaving a half-dropped branch.
+     */
+    async dropCommits(hashes: string[]): Promise<void> {
+        const branch = await this.currentBranch();
+        if (!branch) {
+            throw new Error('HEAD is detached. Check out a branch first.');
+        }
+        for (let i = 0; i < hashes.length; i++) {
+            try {
+                await this.replayOnto(`${hashes[i]}^`, hashes[i], branch);
+            } catch (e) {
+                const progress = i === 0
+                    ? 'Nothing was dropped.'
+                    : `The ${i} newer commit${i === 1 ? '' : 's'} were dropped; the rest were left alone.`;
+                throw new Error(
+                    `${hashes[i].substring(0, 8)} cannot be dropped — a later commit builds on it. ` +
+                    `${progress}\n\n${(e as Error).message}`
+                );
+            }
+        }
     }
 
     /**

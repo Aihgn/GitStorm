@@ -4,3 +4,5 @@ out/
 .claude/
 .agents/
 test/
+.idea/
+MARKETPLACE.md

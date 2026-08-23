@@ -54,8 +54,8 @@ function createStatusBarToggle(): vscode.StatusBarItem {
 }
 
 export function activate(context: vscode.ExtensionContext): void {
-    const blame = new InlineBlame();
     const annotations = new BlameAnnotations();
+    const blame = new InlineBlame(annotations);
     const history = new FileHistoryProvider();
     const repo = new RepoProvider(() => resolveGit(true));
     const graph = new GraphViewProvider(context.extensionPath, () => resolveGit(true));

@@ -1,7 +1,17 @@
 .vscode/**
 .claude/**
+.idea/**
 src/**
+# The packaged readme comes from MARKETPLACE.md via `vsce --readme-path`.
+# Both must be excluded here: vsce adds the chosen one as readme.md, and the
+# repository README.md would collide with it on case-insensitive filesystems.
+README.md
+MARKETPLACE.md
+# vsce rewrites the readme's relative image links to raw.githubusercontent.com,
+# so the screenshots are served from the repository and need not be shipped.
+docs/**
 test/**
+scripts/**
 node_modules/**
 **/*.ts
 **/*.map

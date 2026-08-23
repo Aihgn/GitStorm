@@ -107,6 +107,22 @@ body {
     overflow: auto;
     min-width: 0;
     min-height: 0;
+    /* Row columns respond to the log's own width, not the window's — the
+       details pane takes a slice of the viewport that a media query cannot see. */
+    container-type: inline-size;
+}
+
+/* The subject is the only column worth keeping when the log is narrow. */
+@container (max-width: 620px) {
+    .ago { display: none; }
+}
+
+@container (max-width: 470px) {
+    .author { display: none; }
+}
+
+@container (max-width: 340px) {
+    .hash { display: none; }
 }
 
 .row {
@@ -132,7 +148,29 @@ body {
 
 .lanes {
     flex: none;
+    /* Set once per page load, so rows added later stay column-aligned with the
+       ones already on screen even if a later page opens more lanes. */
+    width: var(--lane-width, 28px);
     margin-right: 8px;
+}
+
+#more:empty {
+    display: none;
+}
+
+#more {
+    padding: 8px 14px;
+    color: var(--vscode-descriptionForeground);
+    font-size: 12px;
+}
+
+#more.clickable {
+    cursor: pointer;
+}
+
+#more.clickable:hover {
+    color: var(--vscode-textLink-foreground);
+    text-decoration: underline;
 }
 
 .subject {
@@ -142,7 +180,7 @@ body {
 }
 
 .author {
-    flex: 0 0 140px;
+    flex: 0 0 120px;
     padding: 0 8px;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -150,7 +188,7 @@ body {
 }
 
 .ago {
-    flex: 0 0 110px;
+    flex: 0 0 96px;
     color: var(--vscode-descriptionForeground);
 }
 
@@ -350,6 +388,16 @@ body {
     font-family: var(--vscode-editor-font-family);
     font-size: 11px;
     font-weight: 700;
+}
+
+/* The multi-selection list puts a short hash where a status letter goes, so it
+   needs the room a single character does not. */
+.st.shash {
+    width: auto;
+    min-width: 58px;
+    text-align: left;
+    font-weight: 400;
+    color: var(--vscode-descriptionForeground);
 }
 
 .st-A { color: var(--vscode-gitDecoration-addedResourceForeground, #6cc24a); }

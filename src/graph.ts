@@ -6,7 +6,7 @@ import { timeAgo } from './format';
 import * as actions from './actions';
 
 interface Message {
-    type: 'ready' | 'select' | 'action' | 'openFile' | 'fileAction' | 'scope';
+    type: 'ready' | 'loadMore' | 'select' | 'action' | 'openFile' | 'fileAction' | 'scope';
     hash?: string;
     hashes?: string[];
     action?: string;
@@ -22,6 +22,8 @@ interface Message {
  */
 export class GraphController {
     private scope: string | undefined;
+    /** Commits handed to the webview so far, i.e. the next page's --skip. */
+    private loaded = 0;
 
     constructor(
         private readonly extensionPath: string,
@@ -61,7 +63,7 @@ export class GraphController {
     <span id="count"></span>
 </div>
 <div id="main">
-    <div id="graph"></div>
+    <div id="graph"><div id="more"></div></div>
     <div id="splitter"></div>
     <div id="detail">
         <div id="dmeta" class="meta"><div class="placeholder">Select a commit.</div></div>
@@ -80,19 +82,26 @@ export class GraphController {
         void this.reload();
     }
 
+    private get pageSize(): number {
+        const size = vscode.workspace.getConfiguration('gitstorm').get('graphPageSize', 500);
+        return Math.max(50, size);
+    }
+
     async reload(): Promise<void> {
         const git = await this.resolveGit();
         if (!git) {
             this.webview.postMessage({ type: 'error', message: 'No git repository' });
             return;
         }
-        const max = vscode.workspace.getConfiguration('gitstorm').get('graphMaxCommits', 1000);
+        this.loaded = 0;
         try {
+            const size = this.pageSize;
             const [commits, refs, branch] = await Promise.all([
-                git.log(max, this.scope),
+                git.log(size, this.scope),
                 git.refs(),
                 git.currentBranch()
             ]);
+            this.loaded = commits.length;
             this.webview.postMessage({
                 type: 'refs',
                 refs: refs.map(r => r.name),
@@ -101,11 +110,32 @@ export class GraphController {
             });
             this.webview.postMessage({
                 type: 'commits',
-                commits: commits.map(c => ({ ...c, ago: timeAgo(c.date) }))
+                commits: commits.map(c => ({ ...c, ago: timeAgo(c.date) })),
+                hasMore: commits.length === size
             });
         } catch (e) {
             const message = (e as Error).message.split('\n')[0];
             this.webview.postMessage({ type: 'error', message });
+            vscode.window.showErrorMessage(`Git Storm: ${message}`);
+        }
+    }
+
+    /** Next page, appended in the webview rather than replacing what is there. */
+    private async loadMore(): Promise<void> {
+        const git = await this.resolveGit();
+        if (!git) { return; }
+        try {
+            const size = this.pageSize;
+            const commits = await git.log(size, this.scope, this.loaded);
+            this.loaded += commits.length;
+            this.webview.postMessage({
+                type: 'commitsAppend',
+                commits: commits.map(c => ({ ...c, ago: timeAgo(c.date) })),
+                hasMore: commits.length === size
+            });
+        } catch (e) {
+            const message = (e as Error).message.split('\n')[0];
+            this.webview.postMessage({ type: 'commitsAppend', commits: [], hasMore: false });
             vscode.window.showErrorMessage(`Git Storm: ${message}`);
         }
     }
@@ -126,6 +156,7 @@ export class GraphController {
 
     async handle(msg: Message): Promise<void> {
         if (msg.type === 'ready') { return this.reload(); }
+        if (msg.type === 'loadMore') { return this.loadMore(); }
         if (msg.type === 'select' && msg.hash) { return this.sendDetail(msg.hash); }
         if (msg.type === 'scope') {
             this.scope = msg.scope || undefined;
@@ -177,6 +208,8 @@ export class GraphController {
         if (action === 'refresh') { return this.reload(); }
         if (action === 'stashPush') { return actions.stashPush(git); }
         if (action === 'squash') { return actions.squash(git, hashes); }
+        // Single-select posts a one-entry `hashes`, so drop needs no special case.
+        if (action === 'drop') { return actions.drop(git, hashes); }
         if (action === 'copyHashes') { return actions.copyHashes(hashes); }
 
         if (!hash) {

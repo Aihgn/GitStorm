@@ -242,6 +242,35 @@ export async function reword(git: Git, hash: string): Promise<void> {
     await run(`Edit message of ${hash.substring(0, 8)}`, () => git.rewordCommit(hash, message));
 }
 
+/** Remove commits from the branch. `hashes` come from the graph newest first. */
+export async function drop(git: Git, hashes: string[]): Promise<void> {
+    const problem = await git.dropProblem(hashes);
+    if (problem) {
+        vscode.window.showWarningMessage(problem);
+        return;
+    }
+    const branch = await readyToRewrite(git, hashes);
+    if (!branch) { return; }
+
+    const details = await Promise.all(hashes.map(h => git.commitDetail(h)));
+    const ok = await confirm(
+        hashes.length === 1
+            ? `Drop commit ${hashes[0].substring(0, 8)}?`
+            : `Drop ${hashes.length} commits?`,
+        `${details.map(d => `• ${d.subject}`).join('\n')}\n\n` +
+        `Their changes are removed from "${branch}" completely — this is not a revert, ` +
+        `nothing records that they existed. Every commit after them is rewritten, so ` +
+        `anything already pushed would need a force-push.`,
+        hashes.length === 1 ? 'Drop commit' : `Drop ${hashes.length} commits`
+    );
+    if (!ok) { return; }
+
+    await run(
+        hashes.length === 1 ? `Drop ${hashes[0].substring(0, 8)}` : `Drop ${hashes.length} commits`,
+        () => git.dropCommits(hashes)
+    );
+}
+
 /** `hashes` come from the graph newest first. */
 export async function squash(git: Git, hashes: string[]): Promise<void> {
     const problem = await git.squashProblem(hashes);
@@ -271,10 +300,9 @@ export async function squash(git: Git, hashes: string[]): Promise<void> {
     );
     if (!ok) { return; }
 
-    // Body lists what went in, oldest first, the way `merge --squash` does.
-    const body = details.map(d => d.subject).reverse().map(s => `* ${s}`).join('\n');
-    const message = `${subject.trim()}\n\n${body}`;
-    await run(`Squash ${hashes.length} commits`, () => git.squashCommits(hashes, message));
+    // Exactly what was typed: the squashed commit does not inherit a body
+    // listing the originals.
+    await run(`Squash ${hashes.length} commits`, () => git.squashCommits(hashes, subject.trim()));
 }
 
 export async function copyMessage(git: Git, hash: string): Promise<void> {
