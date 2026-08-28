@@ -14,24 +14,18 @@ block in **both** files, and it appears.
 Note that `docs/**` is excluded from the `.vsix`; the images are only ever
 fetched over HTTP, never shipped.
 
-## The two files need different paths
-
-`README.md` is read on GitHub by people who can see this repository, so it uses
-relative paths — `docs/demo-panel.png` — and they resolve.
-
-`MARKETPLACE.md` cannot. **This repository is private**, and the Marketplace
-fetches images as an anonymous visitor, which a private repo answers with a 404.
-Worse, `vsce` rewrites any relative path into a repository URL at package time,
-so a relative path there is guaranteed to break. Its slots therefore carry
-`https://PUBLIC-HOST/...` placeholders: replace the host with somewhere public
-before uncommenting.
-
-Somewhere public can be a separate assets-only repository, a gist, an image
-host, or your own domain — the screenshots become public either way, but the
-source does not.
+Relative paths are right in both files. GitHub resolves them in the repository,
+and `vsce` rewrites them into absolute `github.com/Aihgn/GitStorm/raw/HEAD/...`
+URLs at package time, so the same markup serves the Marketplace listing — which
+works because the repository is public. Were it ever made private again, every
+one of these images would 404 for visitors.
 
 The extension's own header icon needs none of this: it ships inside the `.vsix`
 through the manifest's `icon` field.
+
+**The listing only picks up new images when a new version is published**, since
+the README is baked into the `.vsix`. Add the screenshots before the next
+`npm run publish`, not after.
 
 ## Setting up the shot
 
@@ -112,5 +106,5 @@ hover card.
   the README renders them at 960.
 - Run them through an optimiser (`oxipng`, TinyPNG, ImageOptim). A panel
   screenshot should land under 300 KB.
-- These files ship inside the `.vsix` too, so keep the total under a megabyte or
-  two.
+- They are not shipped in the `.vsix` (`docs/**` is excluded), but they do live
+  in the repository forever, so do not commit a 4 MB screenshot.

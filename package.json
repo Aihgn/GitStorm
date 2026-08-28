@@ -434,12 +434,20 @@
     "test": "npm run compile && node test/selfcheck.js",
     "bench": "npm run compile && node test/bench.js",
     "demo-repo": "node scripts/make-demo-repo.js",
-    "package": "npx @vscode/vsce package --readme-path MARKETPLACE.md --allow-missing-repository",
-    "publish": "npx @vscode/vsce publish --readme-path MARKETPLACE.md --allow-missing-repository"
+    "package": "npx @vscode/vsce package --readme-path MARKETPLACE.md",
+    "publish": "npx @vscode/vsce publish --readme-path MARKETPLACE.md"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
     "@types/vscode": "^1.85.0",
     "typescript": "^5.4.0"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Aihgn/GitStorm"
+  },
+  "bugs": {
+    "url": "https://github.com/Aihgn/GitStorm/issues"
+  },
+  "homepage": "https://github.com/Aihgn/GitStorm#readme"
 }

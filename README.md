@@ -217,13 +217,6 @@ and Contributing sections the Marketplace provides for itself. **Do not run
 `vsce publish` directly**: it repackages from source without that flag and
 quietly ships this README instead. Keep the two files in step.
 
-This repository is private, so nothing in `MARKETPLACE.md` may point at it —
-the Marketplace fetches images and follows links anonymously and would get a
-404, and `vsce` turns relative paths into repository URLs. That is why the
-manifest carries no `repository`, `bugs` or `homepage` field, why support goes
-to the listing's Q&A tab, and why the screenshot slots there want absolute URLs
-from a public host. See [`docs/CAPTURE.md`](docs/CAPTURE.md).
-
 The screenshot slots in both files are commented out until the images exist;
 [`docs/CAPTURE.md`](docs/CAPTURE.md) says what to capture and how.
 
