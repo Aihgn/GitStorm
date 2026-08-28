@@ -77,11 +77,9 @@ tags, stashes), **Log** (the graph), and **File History**.
 
 A coloured lane graph across every branch, tag and remote.
 
-<!-- DEMO:graph — a GIF of right-click → squash reads better here than any list.
 <p align="center">
   <img src="docs/demo-squash.png" alt="Two commits selected in the graph, with the context menu open on Squash 2 Commits into One" width="960">
 </p>
--->
 
 
 - **Loads instantly on big repositories.** Commits arrive a page at a time and
@@ -124,11 +122,9 @@ ref scopes the graph to it.
 - **Inline blame** — author, relative time and subject at the end of the line
   your cursor is on, including on unsaved edits.
 
-<!-- DEMO:blame — the annotation column beside real code, with a hover card open.
 <p align="center">
   <img src="docs/demo-blame.png" alt="Blame annotations in the editor gutter with a commit hover card" width="960">
 </p>
--->
 
 ### File history
 
