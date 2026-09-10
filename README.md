@@ -115,8 +115,11 @@ ref scopes the graph to it.
 ### Blame
 
 - **Annotate** — right-click the gutter, or the commit icon in the editor title
-  bar, for a fixed-width `author · date · commit` column in front of every line,
-  the way PhpStorm's Annotate works. Hover a line and click its hash to jump
+  bar, for a fixed-width `author · date` column in front of every line, the way
+  PhpStorm's Annotate works. Each line sits on a band coloured by age, green for
+  the newest commit in the file through to a muted mauve for the oldest, so what
+  changed last is obvious without reading a single date and consecutive lines
+  from one commit read as one block. Hover a line and click its hash to jump
   straight to that commit in the graph. That is the whole point: trace a line
   back to the change that caused it.
 - **Inline blame** — author, relative time and subject at the end of the line

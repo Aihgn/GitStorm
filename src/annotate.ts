@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { BlameInfo, Git } from './git';
-import { annotationText } from './format';
+import { annotationText, blameHeat } from './format';
 
 /**
  * Whole-file blame shown in a column before each line, Storm's "Annotate".
@@ -11,8 +11,10 @@ export class BlameAnnotations implements vscode.Disposable {
         before: {
             color: new vscode.ThemeColor('editorCodeLens.foreground'),
             margin: '0 1.2em 0 0',
-            // The only way to reach the rendered span's CSS from the API.
-            textDecoration: 'none; font-family: var(--vscode-editor-font-family); font-size: 0.85em; opacity: 0.75; white-space: pre'
+            // The only way to reach the rendered span's CSS from the API. No
+            // blanket opacity here: heatColors carries its own alpha per line, and
+            // the two would multiply into an unreadable column.
+            textDecoration: 'none; font-family: var(--vscode-editor-font-family); font-size: 0.85em; white-space: pre'
         }
     });
     /** Documents currently annotated, by URI string. */
@@ -88,13 +90,26 @@ export class BlameAnnotations implements vscode.Disposable {
             return;
         }
 
+        // Uncommitted work is newer than any commit, so it sits outside the age
+        // ramp: no band, and the theme's own "modified" colour for its text.
+        const uncommitted = new vscode.ThemeColor('gitDecoration.modifiedResourceForeground');
+        const band = blameHeat(blame);
+
         const decorations: vscode.DecorationOptions[] = [];
         for (let line = 0; line < editor.document.lineCount; line++) {
             const info = blame[line];
             if (!info) { continue; }
             decorations.push({
                 range: new vscode.Range(line, 0, line, 0),
-                renderOptions: { before: { contentText: annotationText(info) } },
+                renderOptions: {
+                    before: {
+                        contentText: annotationText(info),
+                        // The band carries recency, so the text keeps the theme
+                        // colour set on the decoration type and stays readable.
+                        color: info.isUncommitted ? uncommitted : undefined,
+                        backgroundColor: band[line]
+                    }
+                },
                 hoverMessage: hover(info)
             });
         }

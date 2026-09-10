@@ -2,7 +2,7 @@
   "name": "git-storm",
   "displayName": "Git Storm",
   "description": "PhpStorm-style Git for VS Code: commit graph, branch manager, stashes, inline blame, file history. Free.",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "publisher": "Panterosa",
   "license": "MIT",
   "icon": "media/icon.png",
